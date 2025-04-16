@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Vulnerable Web Application</title>
+</head>
+<body>
+
+    <h1>Flask Vulnerable Web Application</h1>
+
+    <p>This repository contains a vulnerable Flask web application, designed for educational purposes to help beginners understand and learn about web application security vulnerabilities. Each vulnerability is carefully crafted and can be exploited, allowing users to test and experiment with tools such as <strong>Burp Suite</strong> or <strong>OWASP ZAP</strong>.</p>
+
+    <p>The vulnerabilities are based on the <a href="https://owasp.org/www-project-top-ten/" target="_blank">OWASP Top 10</a> most common web security issues.</p>
+
+    <hr>
+
+    <h2>Table of Contents</h2>
+    <ul>
+        <li><a href="#1-sql-injection-vulnerability">1. SQL Injection Vulnerability</a></li>
+        <li><a href="#2-cross-site-scripting-xss">2. Cross-Site Scripting (XSS)</a></li>
+        <li><a href="#3-cross-site-request-forgery-csrf">3. Cross-Site Request Forgery (CSRF)</a></li>
+        <li><a href="#4-insecure-direct-object-references-idor">4. Insecure Direct Object References (IDOR)</a></li>
+        <li><a href="#5-insecure-file-uploads">5. Insecure File Uploads</a></li>
+        <li><a href="#6-insecure-password-storage">6. Insecure Password Storage</a></li>
+        <li><a href="#7-how-to-run-the-application">7. How to Run the Application</a></li>
+        <li><a href="#8-how-to-exploit-the-vulnerabilities">8. How to Exploit the Vulnerabilities</a></li>
+    </ul>
+
+    <hr>
+
+    <h2 id="1-sql-injection-vulnerability">1. SQL Injection Vulnerability</h2>
+
+    <h3>Vulnerability Overview</h3>
+    <p>SQL Injection (SQLi) occurs when an attacker can manipulate an SQL query by injecting malicious input. In this application, this happens in the <code>login</code> route, where user inputs are directly inserted into an SQL query without sanitization.</p>
+
+    <pre><code>cursor.execute(f"SELECT * FROM users WHERE username='{username}' AND password='{password}'")</code></pre>
+
+    <h3>How to Exploit It</h3>
+    <p>To exploit this vulnerability, an attacker could enter the following in the <strong>username</strong> and <strong>password</strong> fields:</p>
+    <ul>
+        <li><strong>Username</strong>: <code>admin' OR '1'='1</code></li>
+        <li><strong>Password</strong>: <code>anything</code></li>
+    </ul>
+    <p>This results in the following query:</p>
+    <pre><code>SELECT * FROM users WHERE username='admin' OR '1'='1' AND password='anything'</code></pre>
+    <p>Since <code>'1'='1'</code> is always true, the attacker could bypass authentication.</p>
+
+    <h3>How to Prevent It</h3>
+    <p>Use <strong>parameterized queries</strong> to prevent SQL injection:</p>
+    <pre><code>cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))</code></pre>
+
+    <hr>
+
+    <h2 id="2-cross-site-scripting-xss">2. Cross-Site Scripting (XSS)</h2>
+
+    <h3>Vulnerability Overview</h3>
+    <p>Cross-Site Scripting (XSS) occurs when an attacker injects malicious scripts into web pages. In this case, the application is vulnerable in the <code>search</code> route, where user input is reflected directly in the response without sanitization.</p>
+
+    <pre><code>query = request.args.get('query', '')
+return f"Search results for: {query}"</code></pre>
+
+    <h3>How to Exploit It</h3>
+    <p>An attacker could craft the following URL to execute JavaScript in the victim’s browser:</p>
+    <pre><code>http://localhost:5000/search?query=<script>alert('XSS')</script></code></pre>
+    <p>This will display an alert box in the victim’s browser.</p>
+
+    <h3>How to Prevent It</h3>
+    <p>Use <strong>escaping</strong> to prevent HTML tags from being interpreted:</p>
+    <pre><code>from flask import escape
+query = escape(request.args.get('query', ''))
+return f"Search results for: {query}"</code></pre>
+
+    <hr>
+
+    <h2 id="3-cross-site-request-forgery-csrf">3. Cross-Site Request Forgery (CSRF)</h2>
+
+    <h3>Vulnerability Overview</h3>
+    <p>CSRF occurs when an attacker tricks a user into making a request on their behalf. The <code>submit</code> route in this application is vulnerable to CSRF attacks because it doesn't use a CSRF token.</p>
+
+    <pre><code>@app.route('/submit', methods=['POST'])
+def submit():
+    message = request.form['message']
+    return f"Message received: {message}"</code></pre>
+
+    <h3>How to Exploit It</h3>
+    <p>An attacker could create a hidden form on their website that submits a request to the vulnerable <code>/submit</code> endpoint. When the victim visits the attacker’s page while logged in, their session will submit the form automatically.</p>
+
+    <h3>How to Prevent It</h3>
+    <p>Use <strong>CSRF Tokens</strong> to verify the authenticity of the request:</p>
+    <pre><code>from flask_wtf.csrf import CSRFProtect
+
+csrf = CSRFProtect(app)</code></pre>
+
+    <hr>
+
+    <h2 id="4-insecure-direct-object-references-idor">4. Insecure Direct Object References (IDOR)</h2>
+
+    <h3>Vulnerability Overview</h3>
+    <p>IDOR occurs when an attacker can access or modify data that they shouldn’t be able to by manipulating identifiers. In the vulnerable application, any authenticated user can access the <code>/admin</code> route without proper authorization.</p>
+
+    <pre><code>@app.route('/admin')
+def admin():
+    if 'user' in session:
+        return render_template('admin.html')
+    return redirect(url_for('login'))</code></pre>
+
+    <h3>How to Exploit It</h3>
+    <p>An attacker can simply visit the <code>/admin</code> route, and if logged in, they can view or modify admin data without proper role checks.</p>
+
+    <h3>How to Prevent It</h3>
+    <p>Implement <strong>Role-Based Access Control (RBAC)</strong> to restrict access to sensitive routes:</p>
+    <pre><code>@app.route('/admin')
+def admin():
+    if 'user' in session and session['user'] == 'admin':
+        return render_template('admin.html')
+    return "Access denied", 403</code></pre>
+
+    <hr>
+
+    <h2 id="5-insecure-file-uploads">5. Insecure File Uploads</h2>
+
+    <h3>Vulnerability Overview</h3>
+    <p>Insecure file uploads occur when users are allowed to upload files without proper validation. In this app, files are saved directly to the server without checking the file type.</p>
+
+    <pre><code>file.save(os.path.join('uploads', file.filename))</code></pre>
+
+    <h3>How to Exploit It</h3>
+    <p>An attacker could upload a malicious file (e.g., a PHP web shell) and execute it on the server.</p>
+
+    <h3>How to Prevent It</h3>
+    <p>Validate file types before accepting uploads. Only allow certain file types (e.g., images):</p>
+    <pre><code>ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+if file and allowed_file(file.filename):
+    file.save(os.path.join('uploads', file.filename))
+else:
+    return "Invalid file type", 400</code></pre>
+
+    <hr>
+
+    <h2 id="6-insecure-password-storage">6. Insecure Password Storage</h2>
+
+    <h3>Vulnerability Overview</h3>
+    <p>Insecure password storage occurs when passwords are stored in plaintext, making them vulnerable if an attacker gains access to the database.</p>
+
+    <pre><code>cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))</code></pre>
+
+    <h3>How to Exploit It</h3>
+    <p>An attacker with access to the database could view or extract passwords in plaintext.</p>
+
+    <h3>How to Prevent It</h3>
+    <p>Hash passwords using a strong hashing algorithm like bcrypt before storing them:</p>
+    <pre><code>import bcrypt
+
+hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))</code></pre>
+
+    <hr>
+
+    <h2 id="7-how-to-run-the-application">7. How to Run the Application</h2>
+
+    <h3>Step 1: Install Dependencies</h3>
+    <p>Install the required Python libraries:</p>
+    <pre><code>pip install -r requirements.txt</code></pre>
+
+    <h3>Step 2: Set Up the Database</h3>
+    <p>Run the following script to set up the database (<code>vulnerable.db</code>):</p>
+    <pre><code>import sqlite3
+
+conn = sqlite3.connect('vulner

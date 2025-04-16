@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  flask-vulnerable-app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+    networks:
+      - flask-network
+
+networks:
+  flask-network:
+    driver: bridge

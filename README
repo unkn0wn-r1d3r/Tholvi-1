@@ -1,0 +1,23 @@
+Build the Docker Image:
+    docker build -t flask-vulnerable-app .
+
+Run the Docker Container:
+    docker run -d -p 5000:5000 flask-vulnerable-app
+
+Run the Flask App in Docker:
+    docker run -d -p 5000:5000 flask-vulnerable-app
+
+File Structure
+
+flask-vulnerable-app/
+├── app.py
+├── Dockerfile
+├── requirements.txt
+├── docker-compose.yml  # (Optional)
+├── templates/
+│   ├── index.html
+│   ├── login.html
+│   ├── signup.html
+│   └── admin.html
+└── uploads/  # (Folder to store uploaded files)
+└── vulnerable.db  # (SQLite database file)
