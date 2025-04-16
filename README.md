@@ -1,4 +1,4 @@
-# Flask Vulnerable Web Application
+# Tholvi-1 Vulnerable Web Application
 
 This repository contains a vulnerable Flask web application, designed for educational purposes to help beginners understand and learn about web application security vulnerabilities. Each vulnerability is carefully crafted and can be exploited, allowing users to test and experiment with tools such as **Burp Suite** or **OWASP ZAP**.
 
